@@ -1,5 +1,6 @@
 #include<SFML/Graphics/Rect.hpp>
 #include<SFML/Graphics/Sprite.hpp>
+#include <SFML/System/Vector2.hpp>
 #include<iostream>
 #include<SFML/Graphics.hpp>
 #include<SFML/Window/Keyboard.hpp>
@@ -71,10 +72,13 @@ public:
         curBar.draw(window);
     }
 
-    void collideWallStatus(const float& dt) {
+    void collisionStatus(const float& dt) {
         curBar.barStatus(dt);
 
         sf::FloatRect bounds = spriteBall.getGlobalBounds();
+        sf::Vector2f pos = spriteBall.getPosition();
+        p = pos.y;
+        q = pos.y + 8.f;
 
         if (spriteBall.getPosition().x <= 0.f || spriteBall.getPosition().x >= 792) {
             valocity.x = -valocity.x;
@@ -83,7 +87,9 @@ public:
             valocity.y = -valocity.y;
         }
         if (bounds.findIntersection(curBar.spriteBar.getGlobalBounds())) {
-            valocity.x = -valocity.x;
+            if ((p >= curBar.a && p <= curBar.b) || (q >= curBar.a && q <= curBar.b)) {
+                valocity.x = -valocity.x;
+            }
         }
 
         spriteBall.move(valocity * dt);
@@ -119,7 +125,7 @@ int main() {
         }
 
         float dt = clock.restart().asSeconds();
-        ball.collideWallStatus(dt);
+        ball.collisionStatus(dt);
 
         window.clear(sf::Color::Black);
         ball.draw(window);
