@@ -1,14 +1,13 @@
 #include<SFML/Graphics/Rect.hpp>
 #include<SFML/Graphics/Sprite.hpp>
-#include <SFML/System/Vector2.hpp>
+#include<SFML/System/Vector2.hpp>
 #include<iostream>
 #include<SFML/Graphics.hpp>
 #include<SFML/Window/Keyboard.hpp>
 
 class Bar {
 private:
-    float barSpeed = 500;
-    bool dir;
+    float barSpeed = 500.f;
 
 public:
     sf::Texture textureBar;
@@ -30,39 +29,60 @@ public:
 
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) {
             move.y -= 1.f;
-            dir = false;
         }
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) {
             move.y += 1.f;
-            dir = true;
         }
 
         move *= barSpeed * dt;
 
         sf::Vector2f pos = spriteBar.getPosition();
         a = pos.y;
-        b = pos.y + 64;
+        b = pos.y + 64.f;
         // std::cout << "bar's Y pos: " << b << "\n";
 
         sf::FloatRect bounds = spriteBar.getGlobalBounds();
-        if (bounds.position.y + move.y >= 4.f && bounds.position.y + move.y <= 600 - 68) {
+        if (bounds.position.y + move.y >= 4.f && bounds.position.y + move.y <= 600.f - 68.f) {
             spriteBar.move(move);
         }
     }
 };
 
+class AIBar {
+public:
+    sf::Texture textureAIBar;
+    sf::Sprite spriteAIBar;
+    float AIBarSpeed = 500.f;
+    float a, b;
+
+    AIBar()
+    : textureAIBar("bar.png", false, sf::IntRect({0, 0}, {2, 16})), spriteAIBar(textureAIBar) {
+        spriteAIBar.setScale({4.f, 4.f});
+        spriteAIBar.setPosition({783.f, 265.f});
+    }
+
+    void draw(sf::RenderWindow& window) {
+        window.draw(spriteAIBar);
+    }
+
+    void AIBarStatus(const float& dt) {
+        sf::Vector2f pos = spriteAIBar.getPosition();
+        a = pos.y;
+        b = pos.y + 64.f;
+    }
+};
+
 class Ball {
-private:
+public:
     sf::Texture textureBall;
     sf::Sprite spriteBall;
     sf::Vector2f valocity;
     Bar curBar;
+    AIBar curAIBar;
+    float p, q, r;
 
-public:
-    float p, q;
-
-    Ball(Bar& bar)
-        : textureBall("ball.png", false, sf::IntRect({0, 0}, {4, 4})), spriteBall(textureBall), curBar(bar), valocity(400.f, 200.f) {
+    Ball(Bar& bar, AIBar& curAiBar)
+        : textureBall("ball.png", false, sf::IntRect({0, 0}, {4, 4})), spriteBall(textureBall), curBar(bar), curAIBar(curAiBar), valocity(400.f, 200.f) {
         spriteBall.setScale({2.f, 2.f});
         spriteBall.setPosition({400.f, 300.f});
     }
@@ -70,20 +90,24 @@ public:
     void draw(sf::RenderWindow& window) {
         window.draw(spriteBall);
         curBar.draw(window);
+        curAIBar.draw(window);
     }
 
     void collisionStatus(const float& dt) {
         curBar.barStatus(dt);
+        curAIBar.AIBarStatus(dt);
 
         sf::FloatRect bounds = spriteBall.getGlobalBounds();
         sf::Vector2f pos = spriteBall.getPosition();
         p = pos.y;
         q = pos.y + 8.f;
+        r = pos.x + 8.f;
+        // std::cout << p << "\n";
 
-        if (spriteBall.getPosition().x <= 0.f || spriteBall.getPosition().x >= 792) {
+        if (spriteBall.getPosition().x <= 0.f || spriteBall.getPosition().x >= 792.f) {
             valocity.x = -valocity.x;
         }
-        if (spriteBall.getPosition().y <= 0.f || spriteBall.getPosition().y >= 592) {
+        if (spriteBall.getPosition().y <= 0.f || spriteBall.getPosition().y >= 592.f) {
             valocity.y = -valocity.y;
         }
         if (bounds.findIntersection(curBar.spriteBar.getGlobalBounds())) {
@@ -92,14 +116,47 @@ public:
             }
         }
 
+        if (bounds.findIntersection(curAIBar.spriteAIBar.getGlobalBounds())) {
+            if ((p >= curAIBar.a && p <= curAIBar.b) || (q >= curAIBar.a && q <= curAIBar.b)) {
+                valocity.x = -valocity.x;
+            }
+        }
+
         spriteBall.move(valocity * dt);
+    }
+
+    void AIBarStatus(const float& dt) {
+        sf::Vector2f move(0, 0);
+
+        sf::Vector2f aiBarPos = curAIBar.spriteAIBar.getPosition();
+
+        if (r > 600.f) {
+            if (p > aiBarPos.y + 32.f) {
+                move.y += 1.f;
+                move *= curAIBar.AIBarSpeed * dt;
+                curAIBar.spriteAIBar.move(move);
+            }
+
+            if (p < aiBarPos.y + 32.f) {
+                move.y -= 1.f;
+                move *= curAIBar.AIBarSpeed * dt;
+                curAIBar.spriteAIBar.move(move);
+            }
+        } else {
+            if (aiBarPos.y + 32.f < 350.f) {
+                move.y += 1.f;
+                move *= 150.f * dt;
+                curAIBar.spriteAIBar.move(move);
+            }
+            if (aiBarPos.y + 32.f > 350.f) {
+                move.y -= 1.f;
+                move *= 100.f * dt;
+                curAIBar.spriteAIBar.move(move);
+            }
+        }
     }
 };
 
-class AIBar {
-public:
-    float AIBarSpeed = 500;
-};
 
 int main() {
     float barSpeed = 500;
@@ -113,7 +170,8 @@ int main() {
     rectangle2.setPosition({18.f, 250.f});
 
     Bar bar;
-    Ball ball(bar);
+    AIBar aiBar;
+    Ball ball(bar, aiBar);
 
     sf::Clock clock;
 
@@ -126,11 +184,10 @@ int main() {
 
         float dt = clock.restart().asSeconds();
         ball.collisionStatus(dt);
+        ball.AIBarStatus(dt);
 
         window.clear(sf::Color::Black);
         ball.draw(window);
-        // window.draw(rectangle1);
-        // window.draw(rectangle2);
         window.display();
     }
 
